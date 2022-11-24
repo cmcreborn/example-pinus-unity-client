@@ -3,15 +3,14 @@ using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Pomelo.Protobuf
 {
     public class MsgDecoder
     {
-        private JObject protos;//The message format(like .proto file)
+        private JObject protos; //The message format(like .proto file)
         private int offset;
-        private byte[] buffer;//The binary message from server.
+        private byte[] buffer;  //The binary message from server.
         private Util util;
 
         public MsgDecoder(JObject protos)
@@ -67,11 +66,19 @@ namespace Pomelo.Protobuf
                             continue;
 
                         var rule = field["rule"];
-                        if (rule is null)
+                        var keyType = field["keyType"];
+                        if (keyType != null)
                         {
-                            msg.Add(name, JToken.FromObject(decodeProp(type.ToString(), 0)));
+                            // map
+                            JObject msgVal = msg[name] as JObject;
+                            if (msgVal is null)
+                            {
+                                msgVal = new JObject();
+                                msg.Add(name, msgVal);
+                            }
+                            decodeMap(msgVal, keyType.ToString(), type.ToString());
                         }
-                        else
+                        else if (rule != null)
                         {
                             if (rule.ToString() == "repeated")
                             {
@@ -84,6 +91,10 @@ namespace Pomelo.Protobuf
                                 decodeArray(msgVal, type.ToString());
                             }
                         }
+                        else
+                        {
+                            msg.Add(name, JToken.FromObject(decodeProp(type.ToString(), 0)));
+                        }
                         break;
                     }
                 }
@@ -93,11 +104,37 @@ namespace Pomelo.Protobuf
 
         private void decodeArray(JArray list, string type)
         {
+            if (util.isSimpleType(type))
+            {
+                uint length = Decoder.decodeUInt32(getBytes());
+                int curOffset = offset;
+                while (offset < curOffset + length)
+                {
+                    list.Add(decodeProp(type, curOffset + Convert.ToInt32(length)));
+                }
+            }
+            else
+            {
+                list.Add(decodeProp(type, 0));
+            }
+        }
+
+        private void decodeMap(JObject mapObj, string keyType, string valType)
+        {
             uint length = Decoder.decodeUInt32(getBytes());
             int curOffset = offset;
             while (offset < curOffset + length)
             {
-                list.Add(decodeProp(type, curOffset + Convert.ToInt32(length)));
+                // key
+                Dictionary<string, int> keyHead = getHead();
+                int id;
+                if (!keyHead.TryGetValue("id", out id))
+                    continue;
+                var key = decodeProp(keyType, curOffset + Convert.ToInt32(length));
+                // value
+                Dictionary<string, int> valHead = getHead();
+                JToken val = JToken.FromObject(decodeProp(valType, 0));
+                mapObj.Add(key.ToString(), val);
             }
         }
 

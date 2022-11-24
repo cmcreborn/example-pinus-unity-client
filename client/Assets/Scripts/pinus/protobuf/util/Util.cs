@@ -76,6 +76,7 @@ namespace Pomelo.Protobuf
             dic.Add("message", 2);
             dic.Add("repeated", 2);
             dic.Add("float", 5);
+            dic.Add("map", 2);
 
             this.typeMap = dic;
         }

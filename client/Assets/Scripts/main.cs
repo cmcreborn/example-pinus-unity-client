@@ -17,7 +17,7 @@ public class main : MonoBehaviour
         //listen on network state changed event
         pclient.NetWorkStateChangedEvent += (state) =>
         {
-            Debug.Log("state changed "+state);
+            Debug.Log("state changed " + state);
         };
 
         pclient.initClient(host, port, () =>
@@ -36,8 +36,10 @@ public class main : MonoBehaviour
                         { 'field1': 234, 'field2': 1.3, 'field3': 2.3, 'arr': [7,8,9], 'field4': true },
                     ],
                     'i32arr': [987, 654, 321],
-                    'flarr': [9.87, 6.54, 3.21]
+                    'flarr': [9.87, 6.54, 3.21],
+                    'uid':'5566user'
                 }");
+                Debug.Log(msg.ToString());
                 pclient.request("connector.entryHandler.entry", msg, (resp) =>
                 {
                     //process the data
@@ -45,11 +47,13 @@ public class main : MonoBehaviour
                 });
             });
         });
+
+        
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }
